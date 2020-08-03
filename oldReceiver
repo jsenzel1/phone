@@ -20,8 +20,7 @@ while True: # Run forever
 
         # if(True):
         if(started):
-            os.system('sudo pkill -f master')
-            os.system('sudo pkill -f select')
+            os.system('pkill -f master')
 
             os.system('echo off')
             
@@ -32,9 +31,9 @@ while True: # Run forever
     
     if GPIO.input(2) == GPIO.LOW and not started:
 
-        os.system('sudo pkill -f master')
+        os.system('pkill -f master')
 
-        subprocess.Popen(["python3", "selectLang.py"])
+        subprocess.Popen(["python3", "master.py"])
        
         started = True
         os.system('echo on')

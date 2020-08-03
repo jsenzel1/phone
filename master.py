@@ -14,7 +14,7 @@ from datetime import datetime
 
 from pad4pi import rpi_gpio
 
-##SINGLETON CODE
+##SINGLETON CODEnano
 
 # from tendo import singleton
 # me = singleton.SingleInstance()
@@ -23,6 +23,10 @@ from pad4pi import rpi_gpio
 
 #-------- KEYPAD SETUP vvvvvvvv --------------------------------------------------------
 
+langString = sys.argv[1]
+print("---------********------MASTER STARTING------*********-------MASTER STARTING--------------MASTER STARTING ----**")
+print("selected language: ", langString)
+# os.system("omxplayer /home/pi/master/lang/"+langString+"/questions/q1.mp3")
 
 
 KEYPAD = [
@@ -49,38 +53,67 @@ currentKey = "none"
 
 recording = False
 
+firstPressed = False
+
+answeredQuestions = [False,False,False,False,False,False,False,False,False,False]
+questionTimes = ["","","","","","","","","",""]
+
 depthCount = 1
 
-playString = 'mpg321 ~/master/clips/introChord.mp3 && mpg321 -g 60 ~/master/clips/music1.mp3'
+# playString = 'mpg321 /home/pi/master/clips/introChord.mp3 && mpg321 -g 60 /home/pi/master/clips/music1.mp3 && mpg321 -g 60 /home/pi/master/clips/music2.mp3'
+playString = 'mpg321 /home/pi/master/lang/'+langString+'/prompts/introduction.mp3'
 recordProcess = subprocess.Popen(playString,shell=True)
 
-# os.system('mpg321 ~/master/clips/introChord.mp3')
-# os.system('mpg321 ~/master/clips/introduction.mp3')
+# playString = 'mpg321 --loop -1 /home/pi/master/clips/menuMusic.mp3'
+# recordProcess = subprocess.Popen(playString,shell=True)
 
+# os.system('mpg321 /home/pi/master/clips/introChord.mp3')
+# os.system('mpg321 /home/pi/master/clips/introduction.mp3')
+
+
+def playChord():
+    num = str(random.randint(1,10))
+    # playString = 'mpg321 /home/pi/master/clips/piano/' + num + '.mp3'
+    playString = 'mpg321 /home/pi/master/clips/buttonSounds/' + num + '.mp3'
+    # recordProcess = subprocess.Popen(playString,shell=True)
+    os.system(playString)
 
 def playBeep():
     num = str(random.randint(1,12))
-    playString = 'mpg321 ~/master/clips/beeps/' + num + '.mp3'
+    playString = 'mpg321 /home/pi/master/clips/beeps/' + num + '.mp3'
     recordProcess = subprocess.Popen(playString,shell=True)
 
 
 def onKey(key):
     print(key)
 
-    
+    global firstPressed
+    global currentKey
+    global depthCount
+    global recording
+
+    if not firstPressed:
+        firstPressed = True
+        # playString = 'mpg123 --loop -1 /home/pi/master/clips/menuMusic.mp3'
+        # recordProcess = subprocess.Popen(playString,shell=True)
+
 
     #TODO kill keys on hold down like with star and hash
     if isinstance(key, int):
 
-        global currentKey
+
 
         currentKey = key
+        depthCount = 1 
 
         # os.system('killall -s 9 mpg321')
         os.system('pkill mpg321')
         os.system('pkill omxplayer')
 
-        playString = 'mpg321 ~/master/questions/q' + str(key)+".mp3 && mpg321 ~/master/clips/recordingInstructions.mp3"
+        playChord()
+
+
+        playString = 'mpg321 /home/pi/master/lang/' + langString+'/questions/q' + str(key)+'.mp3 && mpg321 /home/pi/master/lang/' + langString+'/prompts/recordingInstructions.mp3'
 
 
 
@@ -98,11 +131,6 @@ def onKey(key):
         
     if key == "*":
 
-
-
-        global currentKey
-        global depthCount
-
         print(currentKey)    
 
         os.system('pkill mpg321')
@@ -111,29 +139,46 @@ def onKey(key):
 
         playBeep()
 
-
-
         print("pressed *")
             
-
         # if not starDown:
                 
         #     starDown = True
 
-        prevPlayString = "cd ~/master/answers/" + str(currentKey) +"&& omxplayer $(ls -tr | tail -" + str(depthCount)+"| head -n 1)"
+        prevPlayString = "cd /home/pi/master/lang/" + langString+"/answers/" + str(currentKey) +"&& omxplayer $(ls -tr | tail -" + str(depthCount)+"| head -n 1)"
+
+        
 
         recordProcess = subprocess.Popen(prevPlayString,shell=True)
 
         depthCount = depthCount+1
+
+        #looping playpack attempts
+
+
+        # onlyfiles = next(os.walk(os.walk("/home/pi/master/lang/" + langString+"/answers/" + str(currentKey)))[2] #dir is your directory path as string
+
+        # print(onlyfiles)
+
+        # dirString = "/home/pi/master/lang/" + langString+ "/answers/" + str(currentKey)
+
+        # print("DIRESTRING" + dirString)
+
+        # print("NUM OF FILES: " + str(os.system("cd "+dirString+" && ls -1 | wc -l")))
+
+        # path, dirs, files = next(os.walk("/home/pi/master/lang/" + langString+"/answers/" + str(currentKey))
+        # file_count = len(files)
+
+        # if depthCount > 5:
+        #     depthCount = 1
+        
 
     ######################### RECORDING
 
     if key == "#":
 
 
-        global currentKey
-        global depthCount
-        global recording
+     
 
         os.system('pkill mpg321')
         os.system('pkill omxplayer')
@@ -145,13 +190,24 @@ def onKey(key):
         recording = not recording
 
         if recording:
-            os.system('mpg321 ~/master/clips/rOn.mp3')
+            os.system('mpg321 /home/pi/master/clips/rOn.mp3')
 
             depthCount = depthCount+1
-            curTime = (datetime.now().strftime("%d_%m_%Y_%H:%M:%S:%f"))
+            curTime = (datetime.now().strftime("%d_%m_%Y_%H-%M-%S-%f"))
 
             if currentKey is not "none":
-                systemString= 'arecord -V mono --device=hw:1,0 --format s16_LE --rate 44100 -c1 ~/master/answers/'+ str(currentKey) +'/' + curTime + '.mp3'
+
+                if not answeredQuestions[currentKey]:
+                    systemString= 'arecord -d 160 -V mono --device=hw:1,0 --format s16_LE --rate 44100 -c1 /home/pi/master/lang/'+langString+'/answers/'+ str(currentKey) +'/' + curTime + '.mp3 && mpg321 /home/pi/master/clips/rOff.mp3 &&mpg321 /home/pi/master/lang/'+langString+'/prompts/afterRecording.mp3'
+                    answeredQuestions[currentKey] = True
+                    questionTimes[currentKey] = curTime
+                else:
+                    systemString= 'arecord -d 160 -V mono --device=hw:1,0 --format s16_LE --rate 44100 -c1 /home/pi/master/lang/'+langString+'/answers/'+ str(currentKey) +'/' + questionTimes[currentKey] + '.mp3 && mpg321 /home/pi/master/clips/rOff.mp3 &&mpg321 /home/pi/master/lang/'+langString+'/prompts/afterRecording.mp3'
+                    
+
+
+                
+
 
                 recordProcess = subprocess.Popen(systemString,shell=True)
 
@@ -160,7 +216,11 @@ def onKey(key):
         if not recording:
 
             os.system('killall arecord')
-            os.system('mpg321 ~/master/clips/rOff.mp3')
+            os.system('mpg321 /home/pi/master/clips/rOff.mp3')
+
+            playString = 'mpg321 /home/pi/master/lang/'+langString+'/prompts/afterRecording.mp3'
+
+            recordProcess = subprocess.Popen(playString,shell=True)
 
         # os.system('pkill mpg321')
         # os.system('pkill omxplayer')
@@ -179,3 +239,10 @@ while True:
 ## TODO
 ## watch dog setup
 ## make sure there's only ever 1 running at the same time (this could make large problems!)
+
+
+# TODO for reapeted spamming
+# use the bool array to set questions as already answered
+# have a second string array that takes the date/time of the answered question
+# if already answered, when recording that question use the appropriate previous name and overwrite the other question rather than recording a new one
+# obviously this should reset on re-use
